@@ -267,6 +267,8 @@
       border-radius: 20px; display: inline-block; margin-bottom: 4px;
     }
     .status-pending { background: #fff8e6; color: #b8860b; border: 1px solid #f7e6b0; }
+    /* ===== 新增：已支付状态样式，沿用设计系统圆角/字号，仅换配色 ===== */
+    .status-paid { background: #e8f7ee; color: #1a7f4b; border: 1px solid #b6e2c8; }
     .status-done { background: #f0f0f0; color: #666; border: 1px solid #e0e0e0; }
     .status-cancelled { background: #fafafa; color: #aaa; border: 1px solid #eee; text-decoration: line-through; }
     .booking-remove {
@@ -912,7 +914,8 @@
               spec: b.spec, basePrice: b.basePrice,
               date: b.date, dateFull: b.dateFull, time: b.time, duration: b.duration,
               contact: b.contact, address: '极简大道 1 号',
-              status: 'pending', createdAt,
+              /* ===== 支付完成 → 状态直接设为已支付 ===== */
+              status: 'paid', createdAt,
               payMethod: b.payMethod || '支付宝', payTime: createdAt
             };
           });
@@ -1026,7 +1029,6 @@
       return dates;
     }
 
-    /* ========== 修复点 1：显式白名单 + 传入 pageName ========== */
     // 控制底部导航与购物车悬浮条显示/隐藏
     function updateNavVisibility(pageName) {
       const nav = document.getElementById('bottomNav');
@@ -1042,7 +1044,6 @@
       }
       
       // 购物车仅在首页(home)固定显示；其余页面（详情、确认、订单日历、我的）一律不显示
-      // 使用白名单判断，不依赖可能滞后的 currentPage
       const showCart = (pageName === 'home');
       
       if (showCart) {
@@ -1071,7 +1072,6 @@
         if (item.dataset.page === pageName) item.classList.add('active');
       });
 
-      /* ========== 修复点 2：先更新 currentPage，再刷新可见性 ========== */
       currentPage = pageName;
 
       if (pageName === 'booking') renderBookingPage();
@@ -1391,7 +1391,6 @@
       }, 800);
     }
 
-    /* ========== 修复点 3：updateCartFloat 接受 pageName，默认仅首页显示 ========== */
     // 购物车悬浮条更新（黑色圆形，固定左下侧，仅首页显示）
     function updateCartFloat(pageName) {
       const float = document.getElementById('cartFloat');
@@ -1443,7 +1442,8 @@
       const container = document.getElementById('bookingListContainer');
       const countDisplay = document.getElementById('bookingCountDisplay');
 
-      bookingItems = LocalData.getBookings();
+      /* ===== 订单日历展示的是已支付订单，而非购物车 ===== */
+      bookingItems = LocalData.getOrders();
 
       renderBookingCalendar();
 
@@ -1461,17 +1461,23 @@
       countDisplay.innerText = bookingItems.length + ' 项服务';
 
       container.innerHTML = bookingItems.map(item => {
+        /* ===== 根据订单状态渲染不同标签 ===== */
+        const isPaid = item.status === 'paid';
+        const statusHtml = isPaid
+          ? '<div class="booking-status status-paid">已支付</div>'
+          : '<div class="booking-status status-pending">待接单</div>';
+
         return `
           <div class="booking-item">
             <div class="booking-img">${item.icon}</div>
             <div class="booking-info">
-              <div class="booking-status status-pending">待接单</div>
+              ${statusHtml}
               <div class="booking-name">${item.name}</div>
               <div class="booking-meta">${item.spec.name} · ${item.date} ${item.time} · ⏱ ${item.duration}</div>
               <div class="booking-meta">👤 ${item.contact.name} · ${item.contact.type} ${item.contact.value}</div>
               <div class="booking-price">${item.spec.displayPrice}</div>
             </div>
-            <div class="booking-remove" onclick="requestDeleteBooking(${item.id})">✕</div>
+            <div class="booking-remove" onclick="requestDeleteBooking('${item.id}')">✕</div>
           </div>
         `;
       }).join('');
@@ -1479,7 +1485,7 @@
 
     function requestDeleteBooking(id) {
       pendingDeleteId = id;
-      const item = bookingItems.find(i => i.id === id);
+      const item = LocalData.getOrders().find(i => i.id === id);
       const descEl = document.getElementById('deleteConfirmDesc');
       if (item) {
         descEl.innerText = `将删除「${item.name} · ${item.date} ${item.time}」，删除后无法恢复。`;
@@ -1497,7 +1503,6 @@
     function confirmDeleteBooking() {
       if (pendingDeleteId !== null) {
         LocalData.removeBooking(pendingDeleteId);
-        bookingItems = LocalData.getBookings();
         showToast('已移除');
       }
       closeDeleteConfirm();
@@ -1513,7 +1518,8 @@
       const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
       const bookedSet = new Set();
-      bookingItems.forEach(item => {
+      /* ===== 用已支付订单标记日历 ===== */
+      LocalData.getOrders().forEach(item => {
         if (!item.date) return;
         const parts = item.date.split('-');
         if (parts.length === 2) bookedSet.add(`${year}-${parts[0]}-${parts[1]}`);
@@ -1633,6 +1639,9 @@
       document.getElementById('payOverlay').classList.remove('show');
     }
 
+    /* ============================================================
+     * 支付完成 → 订单状态改为已支付，订单栏保留不消失
+     * ============================================================ */
     function confirmPayment() {
       if (bookingItems.length === 0) { showToast('购物车为空'); return; }
 
@@ -1641,13 +1650,16 @@
         item.payMethod = selectedPayMethod === 'alipay' ? '支付宝' : '微信支付';
       });
 
+      /* 提交后 orders 内为已支付订单，bookings 被清空 */
       LocalData.submitBookings(itemsToBook);
 
-      bookingItems = LocalData.getBookings();
       closePayOverlay();
-      showToast('预约成功，等待店家接单');
+      showToast('支付成功，订单已生成');
       updateCartFloat('home');
-      setTimeout(() => switchPage('home'), 500);
+
+      /* ===== 关键调整：支付后不跳回首页，而是刷新并停留在订单日历 ===== */
+      renderBookingPage();
+      switchPage('booking');
     }
 
     let toastTimer = null;
