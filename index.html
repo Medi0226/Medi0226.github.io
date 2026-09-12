@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>自助预约 · 极简原型（购物车/购物单分离 · 订单日历）</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, 'Helvetica Neue', 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background-color: #f5f5f7;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; padding: 16px;
+    }
+    .phone {
+      width: 375px; height: 780px; background: #ffffff;
+      border-radius: 44px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.02);
+      overflow: hidden; position: relative;
+      display: flex; flex-direction: column; border: 1px solid #eaeaea;
+    }
+    .status-bar {
+      height: 44px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; font-size: 14px; font-weight: 500; color: #000;
+      background: white; border-bottom: 1px solid #f0f0f0;
+      flex-shrink: 0; z-index: 20;
+    }
+    .screen {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      background: white; scroll-behavior: smooth; padding-bottom: 12px;
+      scrollbar-width: none; -ms-overflow-style: none;
+      position: relative;
+    }
+    .screen::-webkit-scrollbar { display: none; }
+    .bottom-nav {
+      height: 68px; background: white; border-top: 1px solid #eaeaea;
+      display: flex; align-items: center; justify-content: space-around;
+      padding: 0 4px; box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.02);
+      flex-shrink: 0;
+    }
+    .bottom-nav.hidden { display: none; }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; font-size: 11px; color: #888; transition: all 0.1s ease;
+      cursor: pointer; flex: 1; padding: 6px 0; border-radius: 40px;
+    }
+    .nav-item.active { color: #000; font-weight: 500; }
+    .nav-icon {
+      width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+      font-size: 20px; line-height: 1; color: inherit; font-weight: 300; letter-spacing: -0.5px;
+      position: relative;
+    }
+    .nav-badge {
+      position: absolute; top: -6px; right: -12px;
+      background: #000; color: #fff; font-size: 10px; font-weight: 600;
+      min-width: 18px; height: 18px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .card {
+      background: white; border-radius: 28px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.02);
+      transition: all 0.15s ease; border: 1px solid #f3f3f3;
+    }
+    h1, h2, h3, p { font-weight: 400; letter-spacing: -0.02em; }
+    .page-title {
+      font-size: 26px; font-weight: 600; color: #000;
+      letter-spacing: -0.5px; padding: 8px 20px 4px;
+    }
+    .subtitle { color: #888; font-size: 14px; padding: 0 20px 12px; font-weight: 350; }
+    .feed { padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 20px; }
+    .feed-card {
+      display: flex; gap: 16px; padding: 18px; border-radius: 28px;
+      background: white;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.01);
+      border: 1px solid #f5f5f5; align-items: center;
+      transition: transform 0.1s ease; cursor: pointer;
+    }
+    .feed-card:active { background: #fafafa; }
+    .feed-img {
+      width: 80px; height: 80px; background: #f0f0f0; border-radius: 24px;
+      display: flex; align-items: center; justify-content: center;
+      color: #bbb; font-size: 32px; font-weight: 200;
+      border: 1px solid #e8e8e8; flex-shrink: 0;
+    }
+    .feed-content { flex: 1; }
+    .feed-title { font-size: 17px; font-weight: 500; color: #000; margin-bottom: 6px; letter-spacing: -0.3px; }
+    .feed-desc { font-size: 13px; color: #777; margin-bottom: 8px; line-height: 1.4; }
+    .feed-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .feed-duration { color: #000; font-weight: 500; }
+    .feed-price { font-size: 16px; font-weight: 600; color: #000; letter-spacing: -0.3px; }
+    .category-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 12px 16px 24px; }
+    .category-card {
+      background: white; border-radius: 24px; padding: 20px 16px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 0, 0, 0.02);
+      border: 1px solid #f0f0f0; text-align: center; cursor: pointer;
+      transition: all 0.1s; display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+    }
+    .category-card:active { background: #f9f9f9; }
+    .category-icon { font-size: 32px; font-weight: 200; color: #222; line-height: 1; }
+    .category-name { font-size: 15px; font-weight: 450; color: #000; }
+
+    /* ===== 二级/三级页面通用头部（含返回按钮） — 固定不滑动 ===== */
+    .subpage-header-bar {
+      display: flex; align-items: center;
+      padding: 8px 12px 4px 8px;
+      background: white;
+      border-bottom: 1px solid #f5f5f5;
+      flex-shrink: 0;
+      min-height: 52px;
+      position: sticky;
+      top: 0;
+      z-index: 15;
+    }
+    .back-btn {
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; color: #000;
+      cursor: pointer; border-radius: 22px;
+      transition: all 0.15s ease; user-select: none;
+      flex-shrink: 0;
+    }
+    .back-btn:active { background: #f2f2f2; }
+    .back-btn.disabled { opacity: 0.3; pointer-events: none; }
+    .back-title {
+      flex: 1;
+      font-size: 17px; font-weight: 600;
+      color: #000; letter-spacing: -0.3px;
+      text-align: center;
+      margin-right: 44px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .back-placeholder {
+      width: 44px; height: 44px;
+      flex-shrink: 0;
+    }
+
+    /* ===== 页面内容包裹 ===== */
+    .page-inner {
+      padding: 0;
+    }
+    .detail-wrapper { padding: 12px 20px 24px; }
+    .detail-image {
+      width: 100%; aspect-ratio: 1/1; background: #f2f2f2; border-radius: 32px;
+      display: flex; align-items: center; justify-content: center;
+      color: #c0c0c0; font-size: 64px; font-weight: 200;
+      border: 1px solid #eaeaea; margin-bottom: 20px;
+    }
+    .detail-title { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .detail-meta { display: flex; align-items: center; gap: 16px; margin: 8px 0 4px; font-size: 14px; color: #666; }
+    .detail-price { font-size: 26px; font-weight: 600; margin: 12px 0 4px; letter-spacing: -0.5px; }
+    .detail-desc { color: #666; font-size: 15px; line-height: 1.6; margin: 12px 0 20px; font-weight: 350; }
+    .section-label {
+      font-size: 15px; font-weight: 600; color: #000; margin: 20px 0 12px;
+      letter-spacing: -0.3px; display: flex; align-items: center; gap: 6px;
+    }
+    .spec-options { display: flex; flex-wrap: wrap; gap: 10px; }
+    .spec-option {
+      flex: 1; min-width: 100px; padding: 14px 12px; border-radius: 20px;
+      border: 1px solid #e0e0e0; background: white; text-align: center;
+      cursor: pointer; transition: all 0.15s ease;
+    }
+    .spec-option:active { background: #f9f9f9; }
+    .spec-option.selected { border: 2px solid #000; background: #fafafa; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04); }
+    .spec-option .spec-name { font-size: 14px; font-weight: 500; color: #000; margin-bottom: 4px; }
+    .spec-option .spec-price { font-size: 16px; font-weight: 600; color: #000; }
+    .spec-option .spec-sub { font-size: 11px; color: #999; margin-top: 2px; }
+    .date-scroll {
+      display: flex; gap: 10px; overflow-x: auto;
+      padding-bottom: 4px; scrollbar-width: none; -ms-overflow-style: none;
+    }
+    .date-scroll::-webkit-scrollbar { display: none; }
+    .date-chip {
+      flex-shrink: 0; width: 64px; padding: 12px 0; border-radius: 20px;
+      border: 1px solid #e0e0e0; background: white; text-align: center;
+      cursor: pointer; transition: all 0.15s ease;
+    }
+    .date-chip:active { background: #f9f9f9; }
+    .date-chip.selected { border: 2px solid #000; background: #fafafa; }
+    .date-chip .date-day { font-size: 11px; color: #888; margin-bottom: 4px; }
+    .date-chip .date-num { font-size: 18px; font-weight: 600; color: #000; }
+    .date-chip.selected .date-day, .date-chip.selected .date-num { color: #000; }
+    .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .time-slot {
+      padding: 12px 4px; border-radius: 18px; border: 1px solid #e0e0e0;
+      background: white; text-align: center; font-size: 13px; font-weight: 500;
+      color: #000; cursor: pointer; transition: all 0.15s ease; position: relative;
+    }
+    .time-slot:active { background: #f9f9f9; }
+    .time-slot.selected { border: 2px solid #000; background: #fafafa; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04); }
+    .time-slot.disabled, .time-slot.soldout {
+      background: #f2f2f2; color: #b0b0b0; border-color: #ececec;
+      cursor: not-allowed; box-shadow: none;
+    }
+    .time-slot.disabled:active, .time-slot.soldout:active { background: #f2f2f2; }
+    .time-slot.soldout .slot-time { text-decoration: line-through; opacity: 0.7; }
+    .time-slot.soldout .slot-tag {
+      display: block; font-size: 10px; color: #b0b0b0;
+      font-weight: 400; margin-top: 2px; letter-spacing: 0.2px;
+    }
+    .time-slot.disabled .slot-tag { display: none; }
+    .time-slot .slot-tag { display: none; }
+    .info-form { display: flex; flex-direction: column; gap: 12px; }
+    .form-row {
+      display: flex; align-items: center; gap: 12px;
+      background: #fafafa; border-radius: 20px; padding: 4px 16px;
+      border: 1px solid #eee; transition: all 0.15s ease;
+    }
+    .form-row:focus-within {
+      border-color: #000; background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .form-row .form-label {
+      font-size: 14px; font-weight: 500; color: #000;
+      min-width: 72px; flex-shrink: 0;
+    }
+    .form-row input, .form-row select {
+      flex: 1; border: none; background: transparent;
+      padding: 14px 0; font-size: 15px; color: #000;
+      outline: none; font-family: inherit;
+      letter-spacing: -0.2px; width: 100%;
+    }
+    .form-row input::placeholder { color: #bbb; font-weight: 350; }
+    .form-row .input-suffix { color: #bbb; font-size: 14px; flex-shrink: 0; }
+    .form-select-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
+    .form-select-wrap select {
+      flex: 0 0 auto; width: auto; padding-right: 8px;
+      font-weight: 500; color: #000; cursor: pointer;
+      appearance: none; -webkit-appearance: none;
+    }
+    .form-select-wrap .arrow { color: #999; font-size: 12px; pointer-events: none; }
+    .btn {
+      border: 1px solid #000; background: white; color: #000; border-radius: 40px;
+      padding: 14px 20px; font-size: 16px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s ease; flex: 1;
+      letter-spacing: -0.2px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    }
+    .btn-primary {
+      background: #000; color: #fff; border: 1px solid #000;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+    }
+    .btn-primary:active { background: #222; }
+    .btn:active { transform: scale(0.98); }
+    .detail-actions { display: flex; gap: 12px; margin-top: 24px; }
+    .booking-list { padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+    .booking-item {
+      display: flex; gap: 14px; padding: 18px; border-radius: 28px;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 0, 0, 0.02);
+      border: 1px solid #f3f3f3; align-items: center;
+    }
+    .booking-img {
+      width: 64px; height: 64px; background: #f0f0f0; border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: #bbb; border: 1px solid #e8e8e8; flex-shrink: 0;
+    }
+    .booking-info { flex: 1; }
+    .booking-name { font-weight: 500; font-size: 16px; margin-bottom: 4px; }
+    .booking-meta { font-size: 12px; color: #888; margin-bottom: 4px; line-height: 1.4; }
+    .booking-price { font-size: 15px; font-weight: 600; }
+    .booking-status {
+      font-size: 11px; font-weight: 600; padding: 3px 10px;
+      border-radius: 20px; display: inline-block; margin-bottom: 4px;
+    }
+    .status-pending { background: #fff8e6; color: #b8860b; border: 1px solid #f7e6b0; }
+    .status-done { background: #f0f0f0; color: #666; border: 1px solid #e0e0e0; }
+    .status-cancelled { background: #fafafa; color: #aaa; border: 1px solid #eee; text-decoration: line-through; }
+    .booking-remove {
+      width: 32px; height: 32px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid #ddd; background: white; font-size: 18px;
+      color: #888; cursor: pointer; transition: all 0.1s;
+    }
+    .booking-remove:active { background: #f5f5f5; color: #000; }
+    .booking-calendar {
+      margin: 0 16px 16px; padding: 20px 16px; background: white;
+      border-radius: 28px; border: 1px solid #f3f3f3;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 0, 0, 0.02);
+    }
+    .calendar-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+    }
+    .calendar-month { font-size: 16px; font-weight: 600; color: #000; letter-spacing: -0.3px; }
+    .calendar-nav { display: flex; gap: 8px; }
+    .calendar-nav-btn {
+      width: 32px; height: 32px; border-radius: 16px; border: 1px solid #e8e8e8;
+      background: white; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: #666; cursor: pointer; transition: all 0.15s ease; user-select: none;
+    }
+    .calendar-nav-btn:active { background: #f5f5f5; color: #000; }
+    .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 8px; }
+    .calendar-weekday { text-align: center; font-size: 12px; color: #999; font-weight: 400; padding: 4px 0; }
+    .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .calendar-day {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 450; color: #000; border-radius: 12px;
+      cursor: default; position: relative; transition: all 0.15s ease;
+    }
+    .calendar-day.empty { color: transparent; pointer-events: none; }
+    .calendar-day.today { color: #000; font-weight: 700; }
+    .calendar-day.today::after {
+      content: ''; position: absolute; bottom: 4px;
+      width: 4px; height: 4px; border-radius: 2px; background: #000;
+    }
+    .calendar-day.booked {
+      background: #000; color: #fff; font-weight: 600;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+    .calendar-day.booked::after { display: none; }
+    .calendar-legend {
+      display: flex; align-items: center; gap: 6px; margin-top: 14px;
+      padding-top: 14px; border-top: 1px solid #f5f5f5; font-size: 12px; color: #999;
+    }
+    .calendar-legend-dot { width: 12px; height: 12px; border-radius: 4px; background: #000; flex-shrink: 0; }
+    .confirm-summary { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; }
+    .summary-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 15px; color: #333; }
+    .summary-row .spec-tag { font-size: 12px; color: #888; margin-left: 6px; }
+    .summary-total {
+      font-weight: 700; font-size: 18px; color: #000;
+      padding-top: 12px; border-top: 1px dashed #ddd; margin-top: 8px;
+    }
+    .confirm-info {
+      background: #fafafa; border-radius: 24px; padding: 18px; margin: 16px 20px;
+      border: 1px solid #f0f0f0; font-size: 14px; color: #444;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .confirm-info .row { display: flex; justify-content: space-between; align-items: center; }
+    .confirm-info .label { font-weight: 500; color: #000; }
+    .confirm-actions { padding: 24px 20px 12px; }
+    .pay-overlay {
+      position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      display: none; align-items: flex-end; justify-content: center;
+      z-index: 100; border-radius: 44px; overflow: hidden;
+      animation: fadeIn 0.2s ease;
+    }
+    .pay-overlay.show { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .pay-sheet {
+      background: #fff; width: 100%; border-radius: 36px 36px 0 0;
+      padding: 24px 20px 30px; box-shadow: 0 -10px 40px rgba(0,0,0,0.08);
+      animation: slideUp 0.3s ease; position: relative;
+      max-height: 85%; overflow-y: auto; scrollbar-width: none;
+    }
+    .pay-sheet::-webkit-scrollbar { display: none; }
+    .pay-sheet-handle { width: 40px; height: 4px; background: #eee; border-radius: 2px; margin: 0 auto 20px; }
+    .pay-title { font-size: 20px; font-weight: 600; color: #000; text-align: center; letter-spacing: -0.3px; margin-bottom: 6px; }
+    .pay-amount { font-size: 32px; font-weight: 700; color: #000; text-align: center; letter-spacing: -1px; margin-bottom: 6px; }
+    .pay-desc { text-align: center; color: #999; font-size: 13px; margin-bottom: 24px; font-weight: 350; }
+    .pay-methods { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    .pay-method {
+      display: flex; align-items: center; gap: 14px; padding: 16px 18px;
+      border-radius: 22px; border: 1px solid #e8e8e8; background: white;
+      cursor: pointer; transition: all 0.15s ease;
+    }
+    .pay-method:active { background: #fafafa; }
+    .pay-method.selected { border: 2px solid #000; background: #fafafa; box-shadow: 0 4px 14px rgba(0,0,0,0.05); }
+    .pay-method-icon {
+      width: 42px; height: 42px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0; border: 1px solid #eee; background: #fff;
+    }
+    .pay-method-info { flex: 1; }
+    .pay-method-name { font-size: 16px; font-weight: 550; color: #000; margin-bottom: 2px; }
+    .pay-method-tip { font-size: 12px; color: #999; font-weight: 350; }
+    .pay-method-check {
+      width: 22px; height: 22px; border-radius: 11px;
+      border: 1.5px solid #ccc;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 12px; flex-shrink: 0; transition: all 0.15s ease;
+    }
+    .pay-method.selected .pay-method-check { background: #000; border-color: #000; color: #fff; }
+    .pay-actions { display: flex; gap: 12px; }
+    .pay-cancel {
+      flex: 1; padding: 16px; border-radius: 40px;
+      border: 1px solid #ddd; background: white; color: #666;
+      font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.15s ease;
+    }
+    .pay-cancel:active { background: #f9f9f9; }
+    .pay-confirm {
+      flex: 2; padding: 16px; border-radius: 40px;
+      border: 1px solid #000; background: #000; color: #fff;
+      font-size: 16px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s ease; box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    }
+    .pay-confirm:active { background: #222; }
+    .pay-confirm:disabled { background: #ccc; border-color: #ccc; cursor: not-allowed; box-shadow: none; }
+    .confirm-overlay {
+      position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 180; border-radius: 44px; overflow: hidden;
+      animation: fadeIn 0.2s ease; padding: 0 32px;
+    }
+    .confirm-overlay.show { display: flex; }
+    .confirm-dialog {
+      background: #fff; width: 100%; max-width: 300px; border-radius: 28px;
+      padding: 28px 24px 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+      text-align: center; animation: dialogPop 0.22s ease;
+    }
+    @keyframes dialogPop {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .confirm-dialog-icon {
+      width: 56px; height: 56px; border-radius: 28px; background: #f5f5f5;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; color: #888; margin: 0 auto 16px;
+    }
+    .confirm-dialog-title { font-size: 17px; font-weight: 600; color: #000; margin-bottom: 8px; letter-spacing: -0.3px; }
+    .confirm-dialog-desc { font-size: 13px; color: #999; line-height: 1.5; margin-bottom: 22px; font-weight: 350; }
+    .confirm-dialog-actions { display: flex; gap: 10px; }
+    .confirm-dialog-cancel {
+      flex: 1; padding: 13px; border-radius: 40px;
+      border: 1px solid #e0e0e0; background: #fff; color: #666;
+      font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.15s ease;
+    }
+    .confirm-dialog-cancel:active { background: #f7f7f7; }
+    .confirm-dialog-ok {
+      flex: 1; padding: 13px; border-radius: 40px;
+      border: 1px solid #000; background: #000; color: #fff;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s ease; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    }
+    .confirm-dialog-ok:active { background: #222; }
+    .toast {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: rgba(0,0,0,0.85); color: #fff;
+      padding: 18px 28px; border-radius: 24px;
+      font-size: 15px; font-weight: 500; z-index: 200;
+      opacity: 0; pointer-events: none; transition: all 0.25s ease;
+      text-align: center; backdrop-filter: blur(4px);
+      letter-spacing: -0.2px; max-width: 240px;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .profile-header {
+      display: flex; align-items: center; padding: 24px 20px; gap: 18px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .avatar {
+      width: 72px; height: 72px; border-radius: 36px; background: #f0f0f0;
+      border: 1px solid #ddd; display: flex; align-items: center; justify-content: center;
+      font-size: 32px; font-weight: 200; color: #aaa;
+    }
+    .profile-info { flex: 1; }
+    .profile-info h3 { font-size: 20px; font-weight: 600; margin-bottom: 4px; color: #000; }
+    .profile-info p { color: #888; font-size: 14px; }
+    .register-btn {
+      flex-shrink: 0; padding: 8px 16px; border-radius: 40px;
+      border: 1px solid #000; background: #000; color: #fff;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: all 0.15s ease; letter-spacing: -0.2px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); white-space: nowrap;
+    }
+    .register-btn:active { background: #222; transform: scale(0.97); }
+    .profile-menu { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+    .menu-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 0; border-bottom: 1px solid #f0f0f0;
+      font-size: 16px; color: #000; cursor: pointer;
+    }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item span:first-child { display: flex; align-items: center; gap: 12px; }
+    .menu-arrow { color: #ccc; font-size: 18px; }
+    /* 三级页面（子页面） */
+    .subpage {
+      position: absolute; inset: 0; background: #fff; z-index: 150;
+      display: none; flex-direction: column; border-radius: 44px; overflow: hidden;
+    }
+    .subpage.show { display: flex; animation: slideInRight 0.25s ease; }
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0.6; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .subpage-header {
+      height: 56px; display: flex; align-items: center;
+      padding: 0 16px; border-bottom: 1px solid #f0f0f0; background: #fff; flex-shrink: 0;
+      position: sticky; top: 0; z-index: 15;
+    }
+    .subpage-back {
+      width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; color: #000; cursor: pointer; border-radius: 20px;
+      transition: all 0.15s ease; user-select: none; margin-left: -4px;
+    }
+    .subpage-back:active { background: #f5f5f5; }
+    .subpage-title {
+      flex: 1; text-align: center; font-size: 17px; font-weight: 600;
+      color: #000; letter-spacing: -0.3px; margin-right: 36px;
+    }
+    .subpage-body { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: none; }
+    .subpage-body::-webkit-scrollbar { display: none; }
+    .subpage-form { display: flex; flex-direction: column; gap: 16px; }
+    .subpage-form .form-row { background: #fafafa; }
+    .subpage-actions { margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .btn-danger { border: 1px solid #e0e0e0; background: white; color: #c00; font-weight: 500; }
+    .btn-danger:active { background: #fff5f5; }
+    .subpage-section-label {
+      font-size: 13px; font-weight: 600; color: #888;
+      margin: 8px 0 0; letter-spacing: 0.2px; text-transform: uppercase;
+    }
+    .subpage-desc { font-size: 13px; color: #999; line-height: 1.5; margin-top: 4px; font-weight: 350; }
+    .subpage-footer {
+      padding: 16px 20px 24px; background: #fff;
+      border-top: 1px solid #f0f0f0; flex-shrink: 0;
+    }
+    .page {
+      display: none; flex-direction: column; height: 100%;
+      overflow-y: auto; scrollbar-width: none;
+    }
+    .page.active-page { display: flex; }
+    .page::-webkit-scrollbar { display: none; }
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px;
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+    }
+    .empty-icon { font-size: 48px; opacity: 0.3; font-weight: 200; }
+    .sticky-footer {
+      padding: 16px 20px 20px; background: white; border-top: 1px solid #f0f0f0;
+    }
+    .hint { font-size: 12px; color: #aaa; margin-top: 6px; font-weight: 350; }
+    
+    /* ===== 购物车悬浮模块（黑色圆形，固定左下侧，bottom:150px; left:300px） ===== */
+    .cart-float {
+      position: fixed;
+      bottom: 150px;
+      left: 300px;
+      width: 62px;
+      height: 62px;
+      background: #000;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+      z-index: 99;
+      transform: none;
+      transition: transform 0.2s, background 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .cart-float:active {
+      transform: scale(0.92);
+      background: #222;
+    }
+    .cart-float.hidden {
+      display: none !important;
+    }
+    .cart-float-icon {
+      font-size: 28px;
+      line-height: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: #fff;
+    }
+    .cart-float-badge {
+      position: absolute;
+      top: -4px;
+      right: -6px;
+      background: #fff;
+      color: #000;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .cart-float-total { display: none; }
+    .cart-float-text, .cart-float-sub, .cart-float-arrow { display: none; }
+    /* 兼容原有布局 */
+    .qr-placeholder {
+      width: 160px; height: 160px; border-radius: 16px; border: 1px solid #eee;
+      display: flex; align-items: center; justify-content: center;
+      color: #ccc; font-size: 13px; background: #fafafa; margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar">
+      <span id="statusTime">9:41</span>
+      <span>•••</span>
+    </div>
+
+    <div class="screen" id="appScreen">
+      <!-- 首页推荐流（一级） -->
+      <div id="homePage" class="page active-page">
+        <div class="page-title">推荐</div>
+        <div class="subtitle">精选服务 · 即刻预约</div>
+        <div class="feed" id="homeFeed"></div>
+      </div>
+
+      <!-- 分类页（一级） -->
+      <div id="categoryPage" class="page">
+        <div class="page-title">分类</div>
+        <div class="subtitle">按服务类型浏览</div>
+        <div class="category-grid">
+          <div class="category-card" onclick="alert('家政服务分类')">
+            <div class="category-icon">🧹</div><div class="category-name">家政</div>
+          </div>
+          <div class="category-card" onclick="alert('形象服务分类')">
+            <div class="category-icon">💇</div><div class="category-name">形象</div>
+          </div>
+          <div class="category-card" onclick="alert('维修服务分类')">
+            <div class="category-icon">🔧</div><div class="category-name">维修</div>
+          </div>
+          <div class="category-card" onclick="alert('健康服务分类')">
+            <div class="category-icon">🧘</div><div class="category-name">健康</div>
+          </div>
+          <div class="category-card" onclick="alert('咨询服务分类')">
+            <div class="category-icon">💬</div><div class="category-name">咨询</div>
+          </div>
+          <div class="category-card" onclick="alert('全部服务')">
+            <div class="category-icon">⋯</div><div class="category-name">全部</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 服务详情页（二级） -->
+      <div id="detailPage" class="page">
+        <div class="subpage-header-bar">
+          <div class="back-btn" onclick="goBack()">‹</div>
+          <div class="back-title">服务详情</div>
+          <div class="back-placeholder"></div>
+        </div>
+        <div class="detail-wrapper">
+          <div class="detail-image" id="detailImage">💄</div>
+          <div class="detail-title" id="detailTitle">漫展接妆</div>
+          <div class="detail-meta">
+            <span>⏱ <span id="detailDuration">50分钟</span></span>
+            <span>📍 上门服务</span>
+          </div>
+          <div class="detail-price" id="detailPrice">¥288</div>
+          <div class="detail-desc" id="detailDesc">包假睫毛</div>
+
+          <div class="section-label">💰 付款规格</div>
+          <div class="spec-options" id="specOptions">
+            <div class="spec-option selected" data-spec="deposit" data-price="50" onclick="selectSpec(this)">
+              <div class="spec-name">定金</div>
+              <div class="spec-price">¥50</div>
+              <div class="spec-sub">到店支付尾款</div>
+            </div>
+            <div class="spec-option" data-spec="balance" data-price="118" onclick="selectSpec(this)">
+              <div class="spec-name">尾款</div>
+              <div class="spec-price">¥118</div>
+              <div class="spec-sub">已付定金</div>
+            </div>
+          </div>
+          <div class="hint" id="specHint">已选择：定金 ¥50，尾款 ¥118 到店支付</div>
+
+          <div class="section-label">📅 预约日期</div>
+          <div class="date-scroll" id="dateScroll"></div>
+
+          <div class="section-label">⏰ 预约时间段</div>
+          <div class="time-grid" id="timeGrid"></div>
+
+          <div class="section-label">📝 联系信息</div>
+          <div class="info-form">
+            <div class="form-row">
+              <span class="form-label">姓名</span>
+              <input type="text" id="contactName" placeholder="请输入您的称呼" maxlength="20">
+            </div>
+            <div class="form-row">
+              <span class="form-label">联系方式</span>
+              <div class="form-select-wrap">
+                <select id="contactType">
+                  <option value="微信">微信</option>
+                  <option value="QQ">QQ</option>
+                </select>
+                <span class="arrow">▼</span>
+              </div>
+              <input type="text" id="contactValue" placeholder="请输入账号" maxlength="30" style="flex:1;">
+            </div>
+          </div>
+
+          <div class="detail-actions">
+            <button class="btn btn-primary" onclick="addToCart()">加入购物车</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 订单日历页（一级，原购物单页） -->
+      <div id="bookingPage" class="page">
+        <div class="page-title">订单日历</div>
+        <div class="subtitle" id="bookingCountDisplay">0 项服务</div>
+        <div class="booking-calendar" id="bookingCalendar"></div>
+        <div class="booking-list" id="bookingListContainer"></div>
+      </div>
+
+      <!-- 确认预约页（二级） -->
+      <div id="confirmPage" class="page">
+        <div class="subpage-header-bar">
+          <div class="back-btn" onclick="goBack()">‹</div>
+          <div class="back-title">确认预约</div>
+          <div class="back-placeholder"></div>
+        </div>
+        <div class="confirm-info" id="confirmInfo"></div>
+        <div class="confirm-summary" id="confirmSummary"></div>
+        <div class="confirm-actions">
+          <button class="btn btn-primary" onclick="submitBooking()" style="width:100%;">确认预约并支付</button>
+        </div>
+      </div>
+
+      <!-- 个人中心（一级） -->
+      <div id="profilePage" class="page">
+        <div class="profile-header">
+          <div class="avatar">◻️</div>
+          <div class="profile-info">
+            <h3 id="profileName">极简用户</h3>
+            <p id="profileId">会员 ID: 00001</p>
+          </div>
+          <button class="register-btn" onclick="openSubpage('registerSubpage')">注册用户</button>
+        </div>
+        <div class="profile-menu">
+          <div class="menu-item" onclick="alert('服务地址')">
+            <span>📍 服务地址</span><span class="menu-arrow">›</span>
+          </div>
+          <div class="menu-item" onclick="openSubpage('settingsSubpage')">
+            <span>⚙️ 设置</span><span class="menu-arrow">›</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 购物车悬浮条（黑色圆形，固定左下侧，仅首页显示） -->
+    <div class="cart-float hidden" id="cartFloat" onclick="goToConfirmFromCart()">
+      <div class="cart-float-icon">
+        🛒
+        <span class="cart-float-badge" id="cartBadge">0</span>
+      </div>
+      <div style="display: none;">
+        <span id="cartFloatText"></span>
+        <span id="cartFloatSub"></span>
+        <span id="cartFloatTotal"></span>
+      </div>
+    </div>
+
+    <!-- 底部导航（仅一级页面显示） -->
+    <div class="bottom-nav" id="bottomNav">
+      <div class="nav-item active" data-page="home" onclick="switchPage('home')">
+        <div class="nav-icon">⌂</div><span>首页</span>
+      </div>
+      <div class="nav-item" data-page="booking" onclick="switchPage('booking')">
+        <div class="nav-icon" style="position:relative;">📅
+          <span class="nav-badge" id="navCartBadge" style="display:none;">0</span>
+        </div><span>订单日历</span>
+      </div>
+      <div class="nav-item" data-page="profile" onclick="switchPage('profile')">
+        <div class="nav-icon">◯</div><span>我的</span>
+      </div>
+    </div>
+
+    <!-- 设置（三级页面） -->
+    <div class="subpage" id="settingsSubpage">
+      <div class="subpage-header">
+        <div class="subpage-back" onclick="closeSubpage('settingsSubpage')">‹</div>
+        <div class="subpage-title">设置</div>
+      </div>
+      <div class="subpage-body">
+        <div class="subpage-form">
+          <div class="subpage-section-label">账号信息</div>
+          <div class="form-row">
+            <span class="form-label">用户名</span>
+            <input type="text" id="settingsUsername" placeholder="请输入用户名" maxlength="20">
+          </div>
+          <div class="subpage-desc">修改后将同步更新个人信息展示</div>
+          <div class="subpage-actions">
+            <button class="btn btn-primary" onclick="saveUsername()">保存修改</button>
+          </div>
+          <div class="subpage-section-label" style="margin-top: 32px;">账号操作</div>
+          <div class="subpage-actions" style="margin-top: 8px;">
+            <button class="btn btn-danger" onclick="logout()">退出登录</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 注册用户（三级页面） -->
+    <div class="subpage" id="registerSubpage">
+      <div class="subpage-header">
+        <div class="subpage-back" onclick="closeSubpage('registerSubpage')">‹</div>
+        <div class="subpage-title">注册用户</div>
+      </div>
+      <div class="subpage-body">
+        <div class="subpage-form">
+          <div class="subpage-section-label">基本信息</div>
+          <div class="form-row">
+            <span class="form-label">用户名</span>
+            <input type="text" id="registerName" placeholder="请输入用户名" maxlength="20">
+          </div>
+          <div class="subpage-desc">注册成功后将自动登录该账户</div>
+        </div>
+      </div>
+      <div class="subpage-footer">
+        <button class="btn btn-primary" onclick="submitRegister()" style="width:100%;">确认注册</button>
+      </div>
+    </div>
+
+    <!-- 付款弹层 -->
+    <div class="pay-overlay" id="payOverlay">
+      <div class="pay-sheet">
+        <div class="pay-sheet-handle"></div>
+        <div class="pay-title">确认支付</div>
+        <div class="pay-amount" id="payAmount">¥50</div>
+        <div class="pay-desc" id="payDesc">漫展接妆 · 定金</div>
+
+        <div class="pay-methods">
+          <div class="pay-method selected" data-method="alipay" onclick="selectPayMethod(this)">
+            <div class="pay-method-icon" style="color:#1677FF; font-weight:600;">支</div>
+            <div class="pay-method-info">
+              <div class="pay-method-name">支付宝</div>
+              <div class="pay-method-tip">推荐使用支付宝付款</div>
+            </div>
+            <div class="pay-method-check">✓</div>
+          </div>
+          <div class="pay-method" data-method="wechat" onclick="selectPayMethod(this)">
+            <div class="pay-method-icon" style="color:#07C160; font-weight:600;">信</div>
+            <div class="pay-method-info">
+              <div class="pay-method-name">微信支付</div>
+              <div class="pay-method-tip">安全快捷的支付方式</div>
+            </div>
+            <div class="pay-method-check">✓</div>
+          </div>
+        </div>
+
+        <div id="payQrBox" style="text-align:center; margin: 12px 0;"></div>
+
+        <div class="pay-actions">
+          <button class="pay-cancel" onclick="closePayOverlay()">取消</button>
+          <button class="pay-confirm" id="payConfirmBtn" onclick="confirmPayment()">立即支付</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除确认弹窗 -->
+    <div class="confirm-overlay" id="deleteConfirmOverlay">
+      <div class="confirm-dialog">
+        <div class="confirm-dialog-icon">🗑</div>
+        <div class="confirm-dialog-title">删除该预约？</div>
+        <div class="confirm-dialog-desc" id="deleteConfirmDesc">删除后无法恢复，请确认是否删除该条预约。</div>
+        <div class="confirm-dialog-actions">
+          <button class="confirm-dialog-cancel" onclick="closeDeleteConfirm()">取消</button>
+          <button class="confirm-dialog-ok" onclick="confirmDeleteBooking()">确认删除</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script>
+    /* ============================================================
+     * 纯本地数据层
+     * ============================================================ */
+    const LocalData = (function () {
+      let services = {
+        manzhan: {
+          key: 'manzhan', name: '漫展接妆', icon: '💄',
+          price: 288, duration: '50分钟', desc: '包假睫毛',
+          dateStart: '2025-03-15', dateEnd: '2025-03-31',
+          slots: ['09:00','10:00','11:00','13:00','14:00','15:00','16:00','17:00','19:00'],
+          enabledSlots: ['09:00','10:00','11:00','13:00','15:00','16:00','19:00'],
+          enabled: true
+        },
+        zhengpian: {
+          key: 'zhengpian', name: '正片接妆', icon: '🎬',
+          price: 368, duration: '60-90分钟', desc: '包假睫毛',
+          dateStart: '2025-03-15', dateEnd: '2025-03-31',
+          slots: ['09:00','10:00','11:00','13:00','14:00','15:00','16:00','17:00','19:00'],
+          enabledSlots: ['09:00','10:00','11:00','13:00','14:00','15:00','16:00','17:00','19:00'],
+          enabled: true
+        }
+      };
+
+      let orders = [];
+      let bookings = [];
+      let payment = { alipay: null, wechat: null };
+
+      return {
+        getServices() { return services; },
+        getService(key) { return services[key] || null; },
+        getOrders() { return orders; },
+        getBookings() { return bookings; },
+        addBooking(item) { bookings.push(item); return item; },
+        removeBooking(id) { bookings = bookings.filter(i => i.id !== id); },
+        clearBookings() { bookings = []; },
+        getPayment() { return payment; },
+        setPayment(type, dataUrl) { payment[type] = dataUrl; },
+        submitBookings(bookingsList) {
+          const now = new Date();
+          const pad = n => String(n).padStart(2, '0');
+          const createdAt = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+          const created = bookingsList.map(b => {
+            const id = 'ORD-' + Date.now() + '-' + Math.floor(Math.random()*900+100);
+            return {
+              id, name: b.name, icon: b.icon,
+              spec: b.spec, basePrice: b.basePrice,
+              date: b.date, dateFull: b.dateFull, time: b.time, duration: b.duration,
+              contact: b.contact, address: '极简大道 1 号',
+              status: 'pending', createdAt,
+              payMethod: b.payMethod || '支付宝', payTime: createdAt
+            };
+          });
+          orders.unshift(...created);
+          bookings = [];
+          return created;
+        },
+        getOccupiedSlots(serviceName, dateStr) {
+          const occupied = new Set();
+          orders.forEach(o => {
+            if (o.name === serviceName && o.date === dateStr && o.status !== 'cancelled') {
+              occupied.add(o.time);
+            }
+          });
+          bookings.forEach(b => {
+            if (b.name === serviceName && b.date === dateStr) {
+              occupied.add(b.time);
+            }
+          });
+          return occupied;
+        }
+      };
+    })();
+
+    /* ============================================================
+     * 客户端业务逻辑
+     * ============================================================ */
+    let currentDetailService = {
+      key: 'manzhan', name: '漫展接妆', basePrice: 288,
+      price: '¥288', duration: '50分钟', desc: '包假睫毛', icon: '💄'
+    };
+
+    let currentSpec = {
+      type: 'deposit', name: '定金', price: 86,
+      displayPrice: '¥86', sub: '到店支付尾款'
+    };
+
+    let userProfile = { name: '极简用户', memberId: '00001', registered: false };
+    let userContact = { name: '', type: '微信', value: '' };
+    let bookingItems = LocalData.getBookings();
+
+    let selectedDate = null;
+    let selectedDateFull = null;
+    let selectedTime = null;
+
+    let selectedPayMethod = 'alipay';
+    let pendingDeleteId = null;
+
+    const pages = {
+      home: 'homePage',
+      category: 'categoryPage',
+      detail: 'detailPage',
+      booking: 'bookingPage',
+      confirm: 'confirmPage',
+      profile: 'profilePage'
+    };
+    let currentPage = 'home';
+
+    // 页面栈（用于返回上一级）
+    let pageStack = ['home'];
+
+    let calendarYear = new Date().getFullYear();
+    let calendarMonth = new Date().getMonth();
+
+    let timeSlots = [
+      { time: '09:00', stock: 1, sold: 0 },
+      { time: '10:00', stock: 1, sold: 0 },
+      { time: '11:00', stock: 1, sold: 0 },
+      { time: '13:00', stock: 1, sold: 0 },
+      { time: '14:00', stock: 1, sold: 0 },
+      { time: '15:00', stock: 1, sold: 0 },
+      { time: '16:00', stock: 1, sold: 0 },
+      { time: '17:00', stock: 1, sold: 0 },
+      { time: '19:00', stock: 1, sold: 0 }
+    ];
+
+    function isSlotSoldOut(slot) { return slot.sold >= slot.stock; }
+
+    function isPastSlot(slotTime, dateStr) {
+      if (!dateStr) return false;
+      const now = new Date();
+      const [mm, dd] = dateStr.split('-').map(Number);
+      const [hh, min] = slotTime.split(':').map(Number);
+      const slotDate = new Date(now.getFullYear(), mm - 1, dd, hh, min, 0, 0);
+      return slotDate.getTime() < now.getTime();
+    }
+
+    function updateStatusTime() {
+      const el = document.getElementById('statusTime');
+      if (!el) return;
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      el.innerText = `${hh}:${mm}`;
+    }
+
+    function generateDates() {
+      const dates = [];
+      const today = new Date();
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${month}-${day}`;
+        const fullStr = `${d.getFullYear()}-${month}-${day} ${weekdays[d.getDay()]}`;
+        const label = i === 0 ? '今天' : (i === 1 ? '明天' : weekdays[d.getDay()]);
+        dates.push({ dateStr, fullStr, dayNum: day, label });
+      }
+      return dates;
+    }
+
+    /* ========== 修复点 1：显式白名单 + 传入 pageName ========== */
+    // 控制底部导航与购物车悬浮条显示/隐藏
+    function updateNavVisibility(pageName) {
+      const nav = document.getElementById('bottomNav');
+      const cartFloat = document.getElementById('cartFloat');
+      
+      // 二级页面（详情页、确认预约页）隐藏底部导航
+      const isSecondary = ['detail', 'confirm'].includes(pageName);
+      
+      if (isSecondary) {
+        nav.classList.add('hidden');
+      } else {
+        nav.classList.remove('hidden');
+      }
+      
+      // 购物车仅在首页(home)固定显示；其余页面（详情、确认、订单日历、我的）一律不显示
+      // 使用白名单判断，不依赖可能滞后的 currentPage
+      const showCart = (pageName === 'home');
+      
+      if (showCart) {
+        cartFloat.classList.remove('hidden');
+        cartFloat.style.display = 'flex';
+      } else {
+        cartFloat.classList.add('hidden');
+        cartFloat.style.display = 'none';
+      }
+      
+      // 同步角标（不改变显隐）
+      updateCartFloat(pageName);
+    }
+
+    // 切换页面（记录历史栈）
+    function switchPage(pageName, isBack) {
+      Object.values(pages).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active-page');
+      });
+      const targetEl = document.getElementById(pages[pageName]);
+      if (targetEl) targetEl.classList.add('active-page');
+
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.page === pageName) item.classList.add('active');
+      });
+
+      /* ========== 修复点 2：先更新 currentPage，再刷新可见性 ========== */
+      currentPage = pageName;
+
+      if (pageName === 'booking') renderBookingPage();
+      if (pageName === 'confirm') renderConfirmPage();
+      if (pageName === 'profile') renderProfilePage();
+      
+      updateNavVisibility(pageName);
+
+      // 页面栈管理（非返回操作才入栈）
+      if (!isBack) {
+        // 如果当前页面与栈顶不同，入栈
+        if (pageStack[pageStack.length - 1] !== pageName) {
+          pageStack.push(pageName);
+        }
+      }
+    }
+
+    // 返回上一级
+    function goBack() {
+      if (pageStack.length > 1) {
+        pageStack.pop(); // 移除当前页
+        const prevPage = pageStack[pageStack.length - 1];
+        switchPage(prevPage, true);
+      } else {
+        switchPage('home', true);
+      }
+    }
+
+    function openSubpage(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('show');
+      if (id === 'settingsSubpage') {
+        document.getElementById('settingsUsername').value = userProfile.name || '';
+      }
+      if (id === 'registerSubpage') {
+        document.getElementById('registerName').value = '';
+      }
+    }
+
+    function closeSubpage(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('show');
+    }
+
+    function renderProfilePage() {
+      document.getElementById('profileName').innerText = userProfile.name || '极简用户';
+      document.getElementById('profileId').innerText = '会员 ID: ' + (userProfile.memberId || '00001');
+    }
+
+    function saveUsername() {
+      const val = document.getElementById('settingsUsername').value.trim();
+      if (!val) { showToast('请输入用户名'); return; }
+      userProfile.name = val;
+      renderProfilePage();
+      showToast('用户名已更新');
+      setTimeout(() => closeSubpage('settingsSubpage'), 600);
+    }
+
+    function logout() {
+      userProfile = { name: '游客', memberId: '------', registered: false };
+      renderProfilePage();
+      closeSubpage('settingsSubpage');
+      showToast('已退出登录');
+    }
+
+    function submitRegister() {
+      const name = document.getElementById('registerName').value.trim();
+      if (!name) { showToast('请输入用户名'); return; }
+      userProfile.name = name;
+      userProfile.memberId = '000' + String(Math.floor(Math.random() * 90) + 10);
+      userProfile.registered = true;
+      userContact.name = name;
+      renderProfilePage();
+      closeSubpage('registerSubpage');
+      switchPage('profile');
+      showToast('注册成功，已登录');
+    }
+
+    // 首页推荐流
+    function renderHomeFeed() {
+      const services = LocalData.getServices();
+      const container = document.getElementById('homeFeed');
+      const keys = ['manzhan', 'zhengpian'];
+      container.innerHTML = keys.map(k => {
+        const s = services[k];
+        if (!s || !s.enabled) return '';
+        return `
+          <div class="feed-card" onclick="goToDetail('${k}')">
+            <div class="feed-img">${s.icon}</div>
+            <div class="feed-content">
+              <div class="feed-title">${s.name}</div>
+              <div class="feed-desc">${s.desc}</div>
+              <div class="feed-meta">
+                <span class="feed-duration">⏱ ${s.duration}</span>
+                <span class="feed-price">¥${s.price}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 详情页
+    function goToDetail(key) {
+      const s = LocalData.getService(key);
+      if (!s) return;
+      currentDetailService = {
+        key, name: s.name, basePrice: s.price,
+        price: '¥' + s.price, duration: s.duration,
+        desc: s.desc, icon: s.icon
+      };
+      document.getElementById('detailImage').innerText = s.icon;
+      document.getElementById('detailTitle').innerText = s.name;
+      document.getElementById('detailPrice').innerText = '¥' + s.price;
+      document.getElementById('detailDuration').innerText = s.duration;
+      document.getElementById('detailDesc').innerText = s.desc;
+
+      resetSpecToDefault(s.price);
+      renderDateChips();
+      renderTimeSlots();
+
+      document.getElementById('contactName').value = userContact.name || '';
+      document.getElementById('contactType').value = userContact.type || '微信';
+      document.getElementById('contactValue').value = userContact.value || '';
+
+      switchPage('detail');
+    }
+
+    function resetSpecToDefault(basePrice) {
+      const depositPrice = Math.round(basePrice * 0.3);
+      const balancePrice = basePrice - depositPrice;
+      const specOptions = document.querySelectorAll('#specOptions .spec-option');
+
+      specOptions[0].dataset.price = depositPrice;
+      specOptions[0].querySelector('.spec-price').innerText = '¥' + depositPrice;
+      specOptions[0].querySelector('.spec-sub').innerText = '尾款 ¥' + balancePrice + ' 到店支付';
+
+      specOptions[1].dataset.price = balancePrice;
+      specOptions[1].querySelector('.spec-price').innerText = '¥' + balancePrice;
+
+      specOptions.forEach(el => el.classList.remove('selected'));
+      specOptions[0].classList.add('selected');
+
+      currentSpec = {
+        type: 'deposit', name: '定金',
+        price: depositPrice, displayPrice: '¥' + depositPrice,
+        sub: '尾款 ¥' + balancePrice + ' 到店支付'
+      };
+      updateSpecHint();
+    }
+
+    function selectSpec(el) {
+      document.querySelectorAll('#specOptions .spec-option').forEach(opt => opt.classList.remove('selected'));
+      el.classList.add('selected');
+      const spec = el.dataset.spec;
+      const price = parseFloat(el.dataset.price);
+      const name = el.querySelector('.spec-name').innerText;
+      const sub = el.querySelector('.spec-sub').innerText;
+      currentSpec = { type: spec, name, price, displayPrice: '¥' + price, sub };
+      updateSpecHint();
+    }
+
+    function updateSpecHint() {
+      const hint = document.getElementById('specHint');
+      if (currentSpec.type === 'deposit') {
+        const balance = currentDetailService.basePrice - currentSpec.price;
+        hint.innerText = `已选择：${currentSpec.name} ${currentSpec.displayPrice}，尾款 ¥${balance} 到店支付`;
+      } else if (currentSpec.type === 'balance') {
+        hint.innerText = `已选择：${currentSpec.name} ${currentSpec.displayPrice}（已付定金）`;
+      } else {
+        hint.innerText = `已选择：${currentSpec.name} ${currentSpec.displayPrice}`;
+      }
+    }
+
+    function renderDateChips() {
+      const dates = generateDates();
+      const container = document.getElementById('dateScroll');
+      container.innerHTML = dates.map((d, i) => `
+        <div class="date-chip ${i === 0 ? 'selected' : ''}" data-date="${d.dateStr}" data-full="${d.fullStr}" onclick="selectDate(this)">
+          <div class="date-day">${d.label}</div>
+          <div class="date-num">${d.dayNum}</div>
+        </div>
+      `).join('');
+      if (dates.length > 0) {
+        selectedDate = dates[0].dateStr;
+        selectedDateFull = dates[0].fullStr;
+      }
+    }
+
+    function selectDate(el) {
+      document.querySelectorAll('#dateScroll .date-chip').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedDate = el.dataset.date;
+      selectedDateFull = el.dataset.full;
+      renderTimeSlots();
+    }
+
+    function renderTimeSlots() {
+      const container = document.getElementById('timeGrid');
+      const key = currentDetailService.key;
+      const service = LocalData.getService(key);
+
+      if (service) {
+        timeSlots.length = 0;
+        service.enabledSlots.forEach(t => {
+          timeSlots.push({ time: t, stock: 1, sold: 0, enabled: true });
+        });
+      }
+
+      const occupied = LocalData.getOccupiedSlots(currentDetailService.name, selectedDate);
+
+      container.innerHTML = timeSlots.map(slot => {
+        const isOccupied = occupied.has(slot.time);
+        const isPast = isPastSlot(slot.time, selectedDate);
+        const disabled = isOccupied || isPast;
+
+        let cls = 'time-slot';
+        if (disabled) cls += ' soldout';
+
+        let tag = '';
+        if (isPast) tag = '已过';
+        else if (isOccupied) tag = '已约';
+
+        const tagHtml = tag ? `<span class="slot-tag">${tag}</span>` : '';
+
+        return `
+          <div class="${cls}" data-time="${slot.time}"
+               onclick="${disabled ? '' : 'selectTime(this)'}">
+            <span class="slot-time">${slot.time}</span>
+            ${tagHtml}
+          </div>
+        `;
+      }).join('');
+
+      if (service) {
+        service.slots.forEach(t => {
+          if (!service.enabledSlots.includes(t)) {
+            const el = container.querySelector(`.time-slot[data-time="${t}"]`);
+            if (el) {
+              el.classList.add('disabled');
+              el.classList.remove('selected');
+              el.onclick = null;
+            }
+          }
+        });
+      }
+
+      const firstAvailable = timeSlots.find(s =>
+        !occupied.has(s.time) && !isPastSlot(s.time, selectedDate)
+      );
+      selectedTime = firstAvailable ? firstAvailable.time : null;
+      if (selectedTime) {
+        const target = container.querySelector(`.time-slot[data-time="${selectedTime}"]`);
+        if (target) target.classList.add('selected');
+      }
+    }
+
+    function selectTime(el) {
+      if (el.classList.contains('soldout')) return;
+      document.querySelectorAll('#timeGrid .time-slot').forEach(t => t.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedTime = el.dataset.time;
+    }
+
+    function collectContactInfo() {
+      const name = document.getElementById('contactName').value.trim();
+      const type = document.getElementById('contactType').value;
+      const value = document.getElementById('contactValue').value.trim();
+      return { name, type, value };
+    }
+
+    function validateContact(info) {
+      if (!info.name) { showToast('请填写您的姓名'); return false; }
+      if (!info.value) { showToast('请填写' + info.type + '账号'); return false; }
+      return true;
+    }
+
+    function isDuplicateBooking(serviceName, date, time) {
+      return bookingItems.some(item =>
+        item.name === serviceName && item.date === date && item.time === time
+      );
+    }
+
+    // 加入购物车（弹出成功提示后跳转首页）
+    function addToCart() {
+      if (!selectedDate || !selectedTime) {
+        showToast('请选择预约日期和时间段'); return;
+      }
+      if (isPastSlot(selectedTime, selectedDate)) {
+        showToast('该时间段已过，请重新选择'); renderTimeSlots(); return;
+      }
+      const contact = collectContactInfo();
+      if (!validateContact(contact)) return;
+      if (isDuplicateBooking(currentDetailService.name, selectedDate, selectedTime)) {
+        showToast('该时间段已预约，请勿重复下单'); return;
+      }
+      userContact = contact;
+      const service = currentDetailService;
+      const newBooking = {
+        id: Date.now() + Math.random(),
+        name: service.name,
+        basePrice: service.basePrice,
+        icon: service.icon,
+        duration: service.duration,
+        spec: { ...currentSpec },
+        date: selectedDate,
+        dateFull: selectedDateFull,
+        time: selectedTime,
+        contact: { ...contact }
+      };
+      LocalData.addBooking(newBooking);
+      bookingItems = LocalData.getBookings();
+      
+      showToast('加入成功՞˶⦁ ༝ ⦁˶՞');
+      setTimeout(() => {
+        switchPage('home');
+      }, 800);
+    }
+
+    /* ========== 修复点 3：updateCartFloat 接受 pageName，默认仅首页显示 ========== */
+    // 购物车悬浮条更新（黑色圆形，固定左下侧，仅首页显示）
+    function updateCartFloat(pageName) {
+      const float = document.getElementById('cartFloat');
+      const badge = document.getElementById('cartBadge');
+      const navBadge = document.getElementById('navCartBadge');
+
+      const items = LocalData.getBookings();
+      const count = items.length;
+      
+      // 仅当明确传入或当前页面为 home 时才可能显示
+      const targetPage = pageName || currentPage;
+      const shouldShow = (targetPage === 'home');
+      
+      if (shouldShow) {
+        float.classList.remove('hidden');
+        float.style.display = 'flex';
+      } else {
+        float.classList.add('hidden');
+        float.style.display = 'none';
+      }
+      
+      // 更新角标
+      badge.innerText = count;
+      if (count > 0) {
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+      
+      // 底部导航角标
+      if (count > 0) {
+        navBadge.style.display = 'flex';
+        navBadge.innerText = count;
+      } else {
+        navBadge.style.display = 'none';
+      }
+    }
+
+    // 从购物车去确认预约页
+    function goToConfirmFromCart() {
+      if (bookingItems.length === 0) {
+        showToast('购物车是空的，请先添加服务'); return;
+      }
+      switchPage('confirm');
+    }
+
+    // 订单日历页（原购物单页）
+    function renderBookingPage() {
+      const container = document.getElementById('bookingListContainer');
+      const countDisplay = document.getElementById('bookingCountDisplay');
+
+      bookingItems = LocalData.getBookings();
+
+      renderBookingCalendar();
+
+      if (bookingItems.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <div>暂无订单</div>
+            <div style="font-size:13px; color:#ccc;">去首页看看服务吧</div>
+          </div>`;
+        countDisplay.innerText = '0 项服务';
+        return;
+      }
+
+      countDisplay.innerText = bookingItems.length + ' 项服务';
+
+      container.innerHTML = bookingItems.map(item => {
+        return `
+          <div class="booking-item">
+            <div class="booking-img">${item.icon}</div>
+            <div class="booking-info">
+              <div class="booking-status status-pending">待接单</div>
+              <div class="booking-name">${item.name}</div>
+              <div class="booking-meta">${item.spec.name} · ${item.date} ${item.time} · ⏱ ${item.duration}</div>
+              <div class="booking-meta">👤 ${item.contact.name} · ${item.contact.type} ${item.contact.value}</div>
+              <div class="booking-price">${item.spec.displayPrice}</div>
+            </div>
+            <div class="booking-remove" onclick="requestDeleteBooking(${item.id})">✕</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function requestDeleteBooking(id) {
+      pendingDeleteId = id;
+      const item = bookingItems.find(i => i.id === id);
+      const descEl = document.getElementById('deleteConfirmDesc');
+      if (item) {
+        descEl.innerText = `将删除「${item.name} · ${item.date} ${item.time}」，删除后无法恢复。`;
+      } else {
+        descEl.innerText = '删除后无法恢复，请确认是否删除该条预约。';
+      }
+      document.getElementById('deleteConfirmOverlay').classList.add('show');
+    }
+
+    function closeDeleteConfirm() {
+      document.getElementById('deleteConfirmOverlay').classList.remove('show');
+      pendingDeleteId = null;
+    }
+
+    function confirmDeleteBooking() {
+      if (pendingDeleteId !== null) {
+        LocalData.removeBooking(pendingDeleteId);
+        bookingItems = LocalData.getBookings();
+        showToast('已移除');
+      }
+      closeDeleteConfirm();
+      renderBookingPage();
+      updateCartFloat('booking');
+    }
+
+    function renderBookingCalendar() {
+      const container = document.getElementById('bookingCalendar');
+      if (!container) return;
+      const year = calendarYear, month = calendarMonth;
+      const today = new Date();
+      const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+      const bookedSet = new Set();
+      bookingItems.forEach(item => {
+        if (!item.date) return;
+        const parts = item.date.split('-');
+        if (parts.length === 2) bookedSet.add(`${year}-${parts[0]}-${parts[1]}`);
+      });
+
+      const firstDay = new Date(year, month, 1);
+      const startWeekday = firstDay.getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const weekdays = ['日','一','二','三','四','五','六'];
+
+      let daysHtml = '';
+      for (let i = 0; i < startWeekday; i++) daysHtml += `<div class="calendar-day empty"></div>`;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const mm = String(month+1).padStart(2,'0');
+        const dd = String(d).padStart(2,'0');
+        const key = `${year}-${mm}-${dd}`;
+        const cls = ['calendar-day'];
+        if (key === todayKey) cls.push('today');
+        if (bookedSet.has(key)) cls.push('booked');
+        daysHtml += `<div class="${cls.join(' ')}">${d}</div>`;
+      }
+
+      container.innerHTML = `
+        <div class="calendar-header">
+          <div class="calendar-month">${year}年${month+1}月</div>
+          <div class="calendar-nav">
+            <div class="calendar-nav-btn" onclick="changeCalendarMonth(-1)">‹</div>
+            <div class="calendar-nav-btn" onclick="changeCalendarMonth(1)">›</div>
+          </div>
+        </div>
+        <div class="calendar-weekdays">
+          ${weekdays.map(w => `<div class="calendar-weekday">${w}</div>`).join('')}
+        </div>
+        <div class="calendar-days">${daysHtml}</div>
+        <div class="calendar-legend">
+          <span class="calendar-legend-dot"></span>
+          <span>已预约日期</span>
+        </div>
+      `;
+    }
+
+    function changeCalendarMonth(delta) {
+      let m = calendarMonth + delta;
+      let y = calendarYear;
+      if (m < 0) { m = 11; y -= 1; }
+      if (m > 11) { m = 0; y += 1; }
+      calendarMonth = m; calendarYear = y;
+      renderBookingCalendar();
+    }
+
+    function renderConfirmPage() {
+      const infoDiv = document.getElementById('confirmInfo');
+      const summaryDiv = document.getElementById('confirmSummary');
+      if (bookingItems.length === 0) {
+        infoDiv.innerHTML = '';
+        summaryDiv.innerHTML = `<div style="padding: 40px 0; text-align: center; color: #aaa;">购物车为空，无法确认</div>`;
+        return;
+      }
+      const first = bookingItems[0];
+      infoDiv.innerHTML = `
+        <div class="row"><span class="label">预约日期</span><span>${first.dateFull || first.date}</span></div>
+        <div class="row"><span class="label">预约时间</span><span>${first.time}</span></div>
+        <div class="row"><span class="label">联系人</span><span>${first.contact.name}</span></div>
+        <div class="row"><span class="label">联系方式</span><span>${first.contact.type}：${first.contact.value}</span></div>
+        <div class="row"><span class="label">服务地址</span><span>极简大道 1 号</span></div>
+      `;
+      let total = 0, totalBase = 0;
+      bookingItems.forEach(item => { total += item.spec.price; totalBase += item.basePrice; });
+      summaryDiv.innerHTML = `
+        ${bookingItems.map(item => `
+          <div class="summary-row">
+            <span>${item.name} <span class="spec-tag">${item.spec.name}</span></span>
+            <span>${item.spec.displayPrice}</span>
+          </div>
+          <div style="font-size:12px; color:#aaa; padding: 0 0 6px 0;">
+            ${item.date} ${item.time} · ${item.duration}
+          </div>
+        `).join('')}
+        <div class="summary-row summary-total">
+          <span>合计</span><span>¥${total.toFixed(2)}</span>
+        </div>
+        ${totalBase > total ? `<div style="font-size:12px; color:#888; text-align:right; margin-top:4px;">
+          尾款合计 ¥${(totalBase - total).toFixed(2)} 到店支付
+        </div>` : ''}
+      `;
+    }
+
+    function submitBooking() {
+      if (bookingItems.length === 0) { showToast('购物车为空'); return; }
+      const first = bookingItems[0];
+      document.getElementById('payAmount').innerText = first.spec.displayPrice;
+      document.getElementById('payDesc').innerText = first.name + ' · ' + first.spec.name;
+      document.getElementById('payOverlay').classList.add('show');
+      updatePayQrBox();
+    }
+
+    function selectPayMethod(el) {
+      document.querySelectorAll('.pay-method').forEach(m => m.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedPayMethod = el.dataset.method;
+      updatePayQrBox();
+    }
+
+    function updatePayQrBox() {
+      const box = document.getElementById('payQrBox');
+      if (!box) return;
+      const payment = LocalData.getPayment();
+      const qr = selectedPayMethod === 'alipay' ? payment.alipay : payment.wechat;
+      if (qr) {
+        box.innerHTML = `<img src="${qr}" style="width:160px;height:160px;border-radius:16px;border:1px solid #eee;">`;
+      } else {
+        box.innerHTML = `<div class="qr-placeholder">收款码待配置</div>`;
+      }
+    }
+
+    function closePayOverlay() {
+      document.getElementById('payOverlay').classList.remove('show');
+    }
+
+    function confirmPayment() {
+      if (bookingItems.length === 0) { showToast('购物车为空'); return; }
+
+      const itemsToBook = [...bookingItems];
+      itemsToBook.forEach(item => {
+        item.payMethod = selectedPayMethod === 'alipay' ? '支付宝' : '微信支付';
+      });
+
+      LocalData.submitBookings(itemsToBook);
+
+      bookingItems = LocalData.getBookings();
+      closePayOverlay();
+      showToast('预约成功，等待店家接单');
+      updateCartFloat('home');
+      setTimeout(() => switchPage('home'), 500);
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    window.onload = function() {
+      updateStatusTime();
+      setInterval(updateStatusTime, 30 * 1000);
+
+      renderHomeFeed();
+      resetSpecToDefault(288);
+      renderDateChips();
+      renderTimeSlots();
+      renderBookingPage();
+      renderProfilePage();
+      switchPage('home');
+    };
+
+    // 全局函数绑定
+    window.switchPage = switchPage;
+    window.goBack = goBack;
+    window.goToDetail = goToDetail;
+    window.selectSpec = selectSpec;
+    window.selectDate = selectDate;
+    window.selectTime = selectTime;
+    window.addToCart = addToCart;
+    window.goToConfirmFromCart = goToConfirmFromCart;
+    window.requestDeleteBooking = requestDeleteBooking;
+    window.closeDeleteConfirm = closeDeleteConfirm;
+    window.confirmDeleteBooking = confirmDeleteBooking;
+    window.submitBooking = submitBooking;
+    window.changeCalendarMonth = changeCalendarMonth;
+    window.openSubpage = openSubpage;
+    window.closeSubpage = closeSubpage;
+    window.saveUsername = saveUsername;
+    window.logout = logout;
+    window.submitRegister = submitRegister;
+    window.selectPayMethod = selectPayMethod;
+    window.closePayOverlay = closePayOverlay;
+    window.confirmPayment = confirmPayment;
+    window.updateCartFloat = updateCartFloat;
+  </script>
+</body>
+</html>
